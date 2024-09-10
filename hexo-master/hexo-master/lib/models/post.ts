@@ -149,44 +149,46 @@ export = (ctx: Hexo) => {
     const existed = PostCategory.find({post_id: id}, {lean: true}).map(pickID);
     const hasHierarchy = cats.filter(Array.isArray).length > 0;
 
+    async function findCategory(cat: string, parentId: string | null) {
+      return Category.findOne({
+        name: cat,
+        parent: parentId ? parentId : {$exists: false}
+      }, {lean: true});
+    }
+
+    async function insertCategory(cat: string, parentId: string | null) {
+      const obj: {name: string, parent?: string} = {name: cat};
+      if (parentId) obj.parent = parentId;
+
+      try {
+        return await Category.insert(obj);
+      } catch (err) {
+        const data = await findCategory(cat, parentId);
+        if (data) return data;
+        throw err;
+      }
+    }
+
+    async function processCategory(cat: string, i: number, parentIds: string[], allIds: string[]) {
+      const parentId = i ? parentIds[i - 1] : null;
+      let data = await findCategory(cat, parentId);
+
+      if (!data) {
+        data = await insertCategory(cat, parentId);
+      }
+
+      allIds.push(data._id);
+      parentIds.push(data._id);
+      return data;
+    }
+
     // Add a hierarchy of categories
     const addHierarchy = (catHierarchy: string | string[]) => {
       const parentIds = [];
       if (!Array.isArray(catHierarchy)) catHierarchy = [catHierarchy];
       // Don't use "Promise.map". It doesn't run in series.
       // MUST USE "Promise.each".
-      return Promise.each(catHierarchy, (cat, i) => {
-        // Find the category by name
-        const data = Category.findOne({
-          name: cat,
-          parent: i ? parentIds[i - 1] : {$exists: false}
-        }, {lean: true});
-
-        if (data) {
-          allIds.push(data._id);
-          parentIds.push(data._id);
-          return data;
-        }
-
-        // Insert the category if not exist
-        const obj: {name: string, parent?: string} = {name: cat};
-        if (i) obj.parent = parentIds[i - 1];
-
-        return Category.insert(obj).catch(err => {
-          // Try to find the category again. Throw the error if not found
-          const data = Category.findOne({
-            name: cat,
-            parent: i ? parentIds[i - 1] : {$exists: false}
-          }, {lean: true});
-
-          if (data) return data;
-          throw err;
-        }).then(data => {
-          allIds.push(data._id);
-          parentIds.push(data._id);
-          return data;
-        });
-      });
+      return Promise.each(catHierarchy, (cat, i) => processCategory(cat, i, parentIds, allIds));
     };
 
     return (hasHierarchy ? Promise.each(cats, addHierarchy) : Promise.resolve(addHierarchy(cats))
