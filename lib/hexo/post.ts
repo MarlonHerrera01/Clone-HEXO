@@ -9,6 +9,7 @@ import { copyDir, exists, listDir, mkdirs, readFile, rmdir, unlink, writeFile } 
 import { parse as yfmParse, split as yfmSplit, stringify as yfmStringify } from 'hexo-front-matter';
 import type Hexo from './index';
 import type { NodeJSLikeCallback, RenderData } from '../types';
+import { generateTextWithIA } from './generate_text';
 
 const preservedKeys = ['title', 'slug', 'path', 'layout', 'date', 'content'];
 
@@ -235,6 +236,7 @@ interface PostData {
   layout?: string;
   slug?: string | number;
   path?: string;
+  topic?: string;
   [prop: string]: any;
 }
 
@@ -267,8 +269,13 @@ class Post {
         context: ctx
       }),
       this._renderScaffold(data)
-    ]).spread((path, content) => {
+    ]).spread(async (path, content) => {
       const result = { path, content };
+
+      // Add extra content
+      if (content && data.topic) {
+        content += await generateTextWithIA(data.topic);
+      }
 
       return Promise.all<void, void | string>([
         // Write content to file
