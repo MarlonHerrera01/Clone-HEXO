@@ -13,6 +13,8 @@ const reservedKeys = {
   p: true,
   replace: true,
   r: true,
+  topic: true,
+  t: true,
   // Global options
   config: true,
   debug: true,
@@ -48,7 +50,8 @@ function newConsole(this: Hexo, args: NewArgs) {
     title,
     layout: args._.length ? args._[0] : this.config.default_layout,
     slug: args.s || args.slug,
-    path
+    path,
+    topic: args.t || args.topic
   };
 
   const keys = Object.keys(args);

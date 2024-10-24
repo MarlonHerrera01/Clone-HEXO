@@ -46,7 +46,7 @@ export = function(ctx: Hexo) {
     ]
   }, require('./migrate'));
 
-  console.register('new', 'Create a new post.', {
+  console.register('new', 'Create a NEW post.', {
     usage: '[layout] <title>',
     arguments: [
       {name: 'layout', desc: 'Post layout. Use post, page, draft or whatever you want.'},
@@ -55,7 +55,8 @@ export = function(ctx: Hexo) {
     options: [
       {name: '-r, --replace', desc: 'Replace the current post if existed.'},
       {name: '-s, --slug', desc: 'Post slug. Customize the URL of the post.'},
-      {name: '-p, --path', desc: 'Post path. Customize the path of the post.'}
+      {name: '-p, --path', desc: 'Post path. Customize the path of the post.'},
+      {name: '-t, --topic', desc: 'Topic for generate with IA.'}
     ]
   }, require('./new'));
 

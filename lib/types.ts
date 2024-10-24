@@ -82,6 +82,7 @@ export interface PostSchema {
   current?: number;
   total?: number;
   description?: string;
+  topic?: string;
   [key: string]: any;
 }
 
@@ -112,6 +113,7 @@ export interface PageSchema {
   total?: number;
   photos?: string[];
   description?: string;
+  topic?: string;
 }
 
 export interface CategorySchema {
