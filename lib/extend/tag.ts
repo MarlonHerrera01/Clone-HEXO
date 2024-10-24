@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { stripIndent } from 'hexo-util';
 import { cyan, magenta, red, bold } from 'picocolors';
 import { Environment } from 'nunjucks';
@@ -6,10 +7,15 @@ import type { NodeJSLikeCallback } from '../types';
 
 const rSwigRawFullBlock = /{% *raw *%}/;
 const rCodeTag = /<code[^<>]*>[\s\S]+?<\/code>/g;
-const escapeSwigTag = (str: string) => str.replace(/{/g, '&#123;').replace(/}/g, '&#125;');
+const escapeSwigTag = (str: string) =>
+  str.replace(/{/g, '&#123;').replace(/}/g, '&#125;');
 
 interface TagFunction {
-  (args: any[], content: string, callback?: NodeJSLikeCallback<any>): string | PromiseLike<string>;
+  (
+    args: any[],
+    content: string,
+    callback?: NodeJSLikeCallback<any>,
+  ): string | PromiseLike<string>;
 }
 interface AsyncTagFunction {
   (args: any[], content: string): Promise<string>;
@@ -39,9 +45,16 @@ class NunjucksTag {
     let argitem = '';
 
     while ((token = parser.nextToken(true))) {
-      if (token.type === lexer.TOKEN_WHITESPACE || token.type === lexer.TOKEN_BLOCK_END) {
+      if (
+        token.type === lexer.TOKEN_WHITESPACE ||
+        token.type === lexer.TOKEN_BLOCK_END
+      ) {
         if (argitem !== '') {
-          const argnode = new nodes.Literal(tag.lineno, tag.colno, argitem.trim());
+          const argnode = new nodes.Literal(
+            tag.lineno,
+            tag.colno,
+            argitem.trim(),
+          );
           argarray.addChild(argnode);
           argitem = '';
         }
@@ -67,9 +80,18 @@ class NunjucksTag {
     return Reflect.apply(this.fn, context.ctx, [args, body]);
   }
 }
+/*
+  1.- Se cambió el tipo 'any' a '() => string' para especificar que 'body' es una función
+      que no recibe parámetros y devuelve un string. Esto soluciona las advertencias de ESLint
+      y mejora la seguridad del tipo en TypeScript.
 
-const trimBody = (body: () => any) => {
-  return stripIndent(body()).replace(/^\n?|\n?$/g, '');
+  2.- Se ajustó la lógica de la función 'trimBody' utilizando 'trim()' para eliminar los saltos
+      de línea al principio y al final de la cadena. Esta solución es más robusta y elimina cualquier
+      espacio en blanco o salto de línea de forma más eficiente que la expresión regular previa.
+*/
+
+export const trimBody = (body: () => string): string => {
+  return stripIndent(body()).trim();
 };
 
 class NunjucksBlock extends NunjucksTag {
@@ -100,7 +122,7 @@ class NunjucksAsyncTag extends NunjucksTag {
   }
 
   run(context, args, callback) {
-    return this._run(context, args, '').then(result => {
+    return this._run(context, args, '').then((result) => {
       callback(null, result);
     }, callback);
   }
@@ -121,14 +143,19 @@ class NunjucksAsyncBlock extends NunjucksBlock {
       // body to be a function
       body = () => result || '';
 
-      this._run(context, args, trimBody(body)).then(result => {
+      this._run(context, args, trimBody(body)).then((result) => {
         callback(err, result);
       });
     });
   }
 }
 
-const getContextLineNums = (min: number, max: number, center: number, amplitude: number) => {
+const getContextLineNums = (
+  min: number,
+  max: number,
+  center: number,
+  amplitude: number,
+) => {
   const result = [];
   let lbound = Math.max(min, center - amplitude);
   const hbound = Math.min(max, center + amplitude);
@@ -138,27 +165,34 @@ const getContextLineNums = (min: number, max: number, center: number, amplitude:
 
 const LINES_OF_CONTEXT = 5;
 
-const getContext = (lines: string[], errLine: number, location: string, type: string) => {
+const getContext = (
+  lines: string[],
+  errLine: number,
+  location: string,
+  type: string,
+) => {
   const message = [
     location + ' ' + red(type),
     cyan('    =====               Context Dump               ====='),
-    cyan('    === (line number probably different from source) ===')
+    cyan('    === (line number probably different from source) ==='),
   ];
 
   message.push(
     // get LINES_OF_CONTEXT lines surrounding `errLine`
-    ...getContextLineNums(1, lines.length, errLine, LINES_OF_CONTEXT)
-      .map(lnNum => {
+    ...getContextLineNums(1, lines.length, errLine, LINES_OF_CONTEXT).map(
+      (lnNum) => {
         const line = '  ' + lnNum + ' | ' + lines[lnNum - 1];
         if (lnNum === errLine) {
           return cyan(bold(line));
         }
 
         return cyan(line);
-      })
+      },
+    ),
   );
-  message.push(cyan(
-    '    =====             Context Dump Ends            ====='));
+  message.push(
+    cyan('    =====             Context Dump Ends            ====='),
+  );
 
   return message;
 };
@@ -176,7 +210,10 @@ class NunjucksError extends Error {
  * @return {Error}    New error object with embedded context
  */
 const formatNunjucksError = (err: Error, input: string, source = ''): Error => {
-  err.message = err.message.replace('(unknown path)', source ? magenta(source) : '');
+  err.message = err.message.replace(
+    '(unknown path)',
+    source ? magenta(source) : '',
+  );
 
   const match = err.message.match(/Line (\d+), Column \d+/);
   if (!match) return err;
@@ -191,14 +228,19 @@ const formatNunjucksError = (err: Error, input: string, source = ''): Error => {
   e.line = errLine;
   e.location = splitted[0];
   e.type = splitted[1].trim();
-  e.message = getContext(input.split(/\r?\n/), errLine, e.location, e.type).join('\n');
+  e.message = getContext(
+    input.split(/\r?\n/),
+    errLine,
+    e.location,
+    e.type,
+  ).join('\n');
   return e;
 };
 
 type RegisterOptions = {
   async?: boolean;
   ends?: boolean;
-}
+};
 
 class Tag {
   public env: Environment;
@@ -206,14 +248,18 @@ class Tag {
 
   constructor() {
     this.env = new Environment(null, {
-      autoescape: false
+      autoescape: false,
     });
   }
 
-  register(name: string, fn: TagFunction): void
-  register(name: string, fn: TagFunction, ends: boolean): void
-  register(name: string, fn: TagFunction, options: RegisterOptions): void
-  register(name: string, fn: TagFunction, options?: RegisterOptions | boolean):void {
+  register(name: string, fn: TagFunction): void;
+  register(name: string, fn: TagFunction, ends: boolean): void;
+  register(name: string, fn: TagFunction, options: RegisterOptions): void;
+  register(
+    name: string,
+    fn: TagFunction,
+    options?: RegisterOptions | boolean,
+  ): void {
     if (!name) throw new TypeError('name is required');
     if (typeof fn !== 'function') throw new TypeError('fn must be a function');
 
@@ -255,8 +301,18 @@ class Tag {
 
   render(str: string): Promise<any>;
   render(str: string, callback: NodeJSLikeCallback<any>): Promise<any>;
-  render(str: string, options: { source?: string, [key: string]: any }, callback?: NodeJSLikeCallback<any>): Promise<any>;
-  render(str: string, options: { source?: string, [key: string]: any } | NodeJSLikeCallback<any> = {}, callback?: NodeJSLikeCallback<any>): Promise<any> {
+  render(
+    str: string,
+    options: { source?: string; [key: string]: any },
+    callback?: NodeJSLikeCallback<any>,
+  ): Promise<any>;
+  render(
+    str: string,
+    options:
+      | { source?: string; [key: string]: any }
+      | NodeJSLikeCallback<any> = {},
+    callback?: NodeJSLikeCallback<any>,
+  ): Promise<any> {
     if (!callback && typeof options === 'function') {
       callback = options;
       options = {};
@@ -265,22 +321,23 @@ class Tag {
     // Get path of post from source
     const { source = '' } = options as { source?: string };
 
-    return Promise.fromCallback(cb => {
+    return Promise.fromCallback((cb) => {
       this.env.renderString(
-        str.replace(rCodeTag, s => {
+        str.replace(rCodeTag, (s) => {
           // https://hexo.io/docs/tag-plugins#Raw
           // https://mozilla.github.io/nunjucks/templating.html#raw
           // Only escape code block when there is no raw tag included
           return s.match(rSwigRawFullBlock) ? s : escapeSwigTag(s);
         }),
         options,
-        cb
+        cb,
       );
-    }).catch(err => {
-      return Promise.reject(formatNunjucksError(err, str, source));
     })
+      .catch((err) => {
+        return Promise.reject(formatNunjucksError(err, str, source));
+      })
       .asCallback(callback);
   }
 }
 
-export = Tag;
+export default Tag;

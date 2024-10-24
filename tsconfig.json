@@ -8,12 +8,13 @@
     "esModuleInterop": true,
     "types": [
       "node",
-      "mocha"
+      "mocha",
+      "chai"
     ]
   },
   "include": [
     "lib/**/*.ts"
-  ],
+, "tests/**/*.ts"  ],
   "exclude": [
     "node_modules"
   ]

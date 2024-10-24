@@ -20,7 +20,7 @@ interface Args {
   _: string[];
   [key: string]: string | boolean | string[];
 }
-type AnyFn = (args: Args, callback?: NodeJSLikeCallback<any>) => any;
+type AnyFn = (args: Args, callback?: NodeJSLikeCallback<unknown>) => unknown;
 interface StoreFunction extends AnyFn {
   desc?: string;
   options?: Option;
