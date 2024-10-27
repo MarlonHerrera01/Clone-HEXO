@@ -66,8 +66,21 @@ class PostRenderEscape {
   }
 
   /**
-   * @param {string} str
-   * @returns string
+   * Escapes all Swig template tags in a string to prevent them from being processed prematurely
+   *
+   * Handles three types of Swig tags:
+   * - Variables: {{ variable }}
+   * - Comments: {# comment #}
+   * - Tags: {% tag %}
+   *
+   * For full tags (like {% if %}...{% endif %}), it captures the entire block
+   *
+   * @param {string} str - The input string containing Swig template syntax
+   * @returns {string} The string with all Swig tags escaped and replaced with placeholders
+   *
+   * @example
+   * Input: "Hello {{ name }}"
+   * Output: "Hello <!--swig\uFFFC0-->"
    */
   escapeAllSwigTags(str: string) {
     if (!/(\{\{.+?\}\})|(\{#.+?#\})|(\{%.+?%\})/s.test(str)) {
