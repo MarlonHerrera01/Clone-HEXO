@@ -18,13 +18,16 @@ export = async (ctx: Hexo): Promise<void> => {
   if (!path) return;
   configPath = path;
 
+  // Load and parse the config file using the render engine
   let config = await ctx.render.render({ path });
   if (!config || typeof config !== 'object') return;
 
   ctx.log.debug('Config loaded: %s', magenta(tildify(configPath)));
 
+  // Merge the loaded config with existing config
   ctx.config = deepMerge(ctx.config, config);
-  // If root is not exist, create it by config.url
+
+  // Set default root URL from config.url if not specified
   if (!config.root) {
     let { pathname } = new URL(ctx.config.url);
     if (!pathname.endsWith('/')) pathname += '/';
@@ -35,9 +38,9 @@ export = async (ctx: Hexo): Promise<void> => {
   validateConfig(ctx);
 
   ctx.config_path = configPath;
-  // Trim multiple trailing '/'
+  // Normalize URL paths: ensure root ends with exactly one '/'
   config.root = config.root.replace(/\/*$/, '/');
-  // Remove any trailing '/'
+  // Ensure URL doesn't end with trailing slashes
   config.url = config.url.replace(/\/+$/, '');
 
   ctx.public_dir = resolve(baseDir, config.public_dir) + sep;
@@ -49,10 +52,13 @@ export = async (ctx: Hexo): Promise<void> => {
   const theme = config.theme.toString();
   config.theme = theme;
 
-  const themeDirFromThemes = join(baseDir, 'themes', theme) + sep; // base_dir/themes/[config.theme]/
-  const themeDirFromNodeModules = join(ctx.plugin_dir, 'hexo-theme-' + theme) + sep; // base_dir/node_modules/hexo-theme-[config.theme]/
+  // Define possible theme locations:
+  // 1. In themes directory (preferred)
+  // 2. In node_modules as a package
+  const themeDirFromThemes = join(baseDir, 'themes', theme) + sep;
+  const themeDirFromNodeModules = join(ctx.plugin_dir, 'hexo-theme-' + theme) + sep;
 
-  // themeDirFromThemes has higher priority than themeDirFromNodeModules
+  // Set up theme directory and ignore patterns based on theme location
   let ignored: string[] = [];
   if (await exists(themeDirFromThemes)) {
     ctx.theme_dir = themeDirFromThemes;
@@ -63,7 +69,6 @@ export = async (ctx: Hexo): Promise<void> => {
   }
   ctx.theme_script_dir = join(ctx.theme_dir, 'scripts') + sep;
   ctx.theme = new Theme(ctx, { ignored });
-
 };
 
 async function findConfigPath(path: string): Promise<string> {
